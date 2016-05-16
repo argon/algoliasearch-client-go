@@ -3,59 +3,59 @@ package algoliasearch
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"reflect"
-	"time"
 	"strings"
-	"encoding/base64"
+	"time"
 )
 
-type Client struct {
+type client struct {
 	transport *Transport
 }
 
-func NewClient(appID, apiKey string) *Client {
-	client := new(Client)
-	client.transport = NewTransport(appID, apiKey)
-	return client
+func NewClient(appID, apiKey string) Client {
+	c := new(client)
+	c.transport = NewTransport(appID, apiKey)
+	return c
 }
 
-func NewClientWithHosts(appID, apiKey string, hosts []string) *Client {
-	client := new(Client)
-	client.transport = NewTransportWithHosts(appID, apiKey, hosts)
-	return client
+func NewClientWithHosts(appID, apiKey string, hosts []string) Client {
+	c := new(client)
+	c.transport = NewTransportWithHosts(appID, apiKey, hosts)
+	return c
 }
 
-func (c *Client) SetExtraHeader(key string, value string) {
+func (c *client) SetExtraHeader(key string, value string) {
 	c.transport.setExtraHeader(key, value)
 }
 
-func (c *Client) SetTimeout(connectTimeout int, readTimeout int) {
+func (c *client) SetTimeout(connectTimeout int, readTimeout int) {
 	c.transport.setTimeout(time.Duration(connectTimeout)*time.Millisecond, time.Duration(readTimeout)*time.Millisecond)
 }
 
-func (c *Client) ListIndexes() (interface{}, error) {
+func (c *client) ListIndexes() (interface{}, error) {
 	return c.transport.request("GET", "/1/indexes", nil, read)
 }
 
-func (c *Client) InitIndex(indexName string) *Index {
+func (c *client) InitIndex(indexName string) Index {
 	return NewIndex(indexName, c)
 }
 
-func (c *Client) ListKeys() (interface{}, error) {
+func (c *client) ListKeys() (interface{}, error) {
 	return c.transport.request("GET", "/1/keys", nil, read)
 }
 
-func (c *Client) MoveIndex(source string, destination string) (interface{}, error) {
+func (c *client) MoveIndex(source string, destination string) (interface{}, error) {
 	return c.InitIndex(source).Move(destination)
 }
 
-func (c *Client) CopyIndex(source string, destination string) (interface{}, error) {
+func (c *client) CopyIndex(source string, destination string) (interface{}, error) {
 	return c.InitIndex(source).Copy(destination)
 }
 
-func (c *Client) AddKey(acl, indexes []string, validity int, maxQueriesPerIPPerHour int, maxHitsPerQuery int) (interface{}, error) {
+func (c *client) AddKey(acl, indexes []string, validity int, maxQueriesPerIPPerHour int, maxHitsPerQuery int) (interface{}, error) {
 	body := make(map[string]interface{})
 	body["acl"] = acl
 	body["maxHitsPerQuery"] = maxHitsPerQuery
@@ -65,11 +65,11 @@ func (c *Client) AddKey(acl, indexes []string, validity int, maxQueriesPerIPPerH
 	return c.AddKeyWithParam(body)
 }
 
-func (c *Client) AddKeyWithParam(params interface{}) (interface{}, error) {
+func (c *client) AddKeyWithParam(params interface{}) (interface{}, error) {
 	return c.transport.request("POST", "/1/keys/", params, read)
 }
 
-func (c *Client) UpdateKey(key string, acl, indexes []string, validity int, maxQueriesPerIPPerHour int, maxHitsPerQuery int) (interface{}, error) {
+func (c *client) UpdateKey(key string, acl, indexes []string, validity int, maxQueriesPerIPPerHour int, maxHitsPerQuery int) (interface{}, error) {
 	body := make(map[string]interface{})
 	body["acl"] = acl
 	body["maxHitsPerQuery"] = maxHitsPerQuery
@@ -79,19 +79,19 @@ func (c *Client) UpdateKey(key string, acl, indexes []string, validity int, maxQ
 	return c.UpdateKeyWithParam(key, body)
 }
 
-func (c *Client) UpdateKeyWithParam(key string, params interface{}) (interface{}, error) {
+func (c *client) UpdateKeyWithParam(key string, params interface{}) (interface{}, error) {
 	return c.transport.request("PUT", "/1/keys/"+key, params, write)
 }
 
-func (c *Client) GetKey(key string) (interface{}, error) {
+func (c *client) GetKey(key string) (interface{}, error) {
 	return c.transport.request("GET", "/1/keys/"+key, nil, read)
 }
 
-func (c *Client) DeleteKey(key string) (interface{}, error) {
+func (c *client) DeleteKey(key string) (interface{}, error) {
 	return c.transport.request("DELETE", "/1/keys/"+key, nil, write)
 }
 
-func (c *Client) GetLogs(offset, length int, logType string) (interface{}, error) {
+func (c *client) GetLogs(offset, length int, logType string) (interface{}, error) {
 	body := make(map[string]interface{})
 	body["offset"] = offset
 	body["length"] = length
@@ -99,7 +99,7 @@ func (c *Client) GetLogs(offset, length int, logType string) (interface{}, error
 	return c.transport.request("GET", "/1/logs", body, write)
 }
 
-func (c *Client) GenerateSecuredApiKey(apiKey string, public interface{}, userToken ...string) (string, error) {
+func (c *client) GenerateSecuredApiKey(apiKey string, public interface{}, userToken ...string) (string, error) {
 	if len(userToken) > 1 {
 		return "", errors.New("Too many parameters")
 	}
@@ -117,8 +117,8 @@ func (c *Client) GenerateSecuredApiKey(apiKey string, public interface{}, userTo
 		}
 		message = c.transport.EncodeParams(public)
 	} else if strings.Contains(public.(string), "=") { // Url encoded query parameters
-		if (len(userTokenStr) != 0) {
-			message = public.(string) + "&" + c.transport.EncodeParams("userToken=" + c.transport.urlEncode(userTokenStr))
+		if len(userTokenStr) != 0 {
+			message = public.(string) + "&" + c.transport.EncodeParams("userToken="+c.transport.urlEncode(userTokenStr))
 		} else {
 			message = public.(string)
 		}
@@ -138,11 +138,11 @@ func (c *Client) GenerateSecuredApiKey(apiKey string, public interface{}, userTo
 	return base64.StdEncoding.EncodeToString([]byte(securedKey + message)), nil
 }
 
-func (c *Client) EncodeParams(body interface{}) string {
+func (c *client) EncodeParams(body interface{}) string {
 	return c.transport.EncodeParams(body)
 }
 
-func (c *Client) MultipleQueries(queries []interface{}, optionals ...string) (interface{}, error) {
+func (c *client) MultipleQueries(queries []interface{}, optionals ...string) (interface{}, error) {
 	if len(optionals) > 2 {
 		return "", errors.New("Too many parametters")
 	}
@@ -168,7 +168,7 @@ func (c *Client) MultipleQueries(queries []interface{}, optionals ...string) (in
 	return c.transport.request("POST", "/1/indexes/*/queries?strategy="+strategy, body, search)
 }
 
-func (c *Client) CustomBatch(queries interface{}) (interface{}, error) {
+func (c *client) CustomBatch(queries interface{}) (interface{}, error) {
 	request := make(map[string]interface{})
 	request["requests"] = queries
 	return c.transport.request("POST", "/1/indexes/*/batch", request, write)

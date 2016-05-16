@@ -4,14 +4,14 @@ import (
 	"errors"
 )
 
-type IndexIterator struct {
+type indexIterator struct {
 	answer interface{}
 	params interface{}
 	pos    int
-	index  *Index
+	index  *index
 }
 
-func (it *IndexIterator) Next() (interface{}, error) {
+func (it *indexIterator) Next() (interface{}, error) {
 	var err error
 	for err == nil {
 		hits := it.answer.(map[string]interface{})["hits"].([]interface{})
@@ -28,7 +28,7 @@ func (it *IndexIterator) Next() (interface{}, error) {
 	return nil, err
 }
 
-func (it *IndexIterator) GetCursor() (string, bool) {
+func (it *indexIterator) GetCursor() (string, bool) {
 	cursor, ok := it.answer.(map[string]interface{})["cursor"]
 	cursorStr := ""
 	if cursor != nil {
@@ -37,7 +37,7 @@ func (it *IndexIterator) GetCursor() (string, bool) {
 	return cursorStr, ok
 }
 
-func (it *IndexIterator) loadNextPage() error {
+func (it *indexIterator) loadNextPage() error {
 	it.pos = 0
 	cursor, _ := it.GetCursor()
 	answer, err := it.index.BrowseFrom(it.params, cursor)

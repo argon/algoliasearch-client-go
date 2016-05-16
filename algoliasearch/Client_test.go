@@ -15,22 +15,20 @@ func safeName(name string) string {
 	return name + "_travis-" + buildId
 }
 
-func initTest(t *testing.T) (*Client, *Index) {
+func initTest(t *testing.T) (*client, *index) {
 	appID, haveAppID := syscall.Getenv("ALGOLIA_APPLICATION_ID")
 	apiKey, haveApiKey := syscall.Getenv("ALGOLIA_API_KEY")
 	if !haveApiKey || !haveAppID {
 		t.Fatalf("Need ALGOLIA_APPLICATION_ID and ALGOLIA_API_KEY")
 	}
-	client := NewClient(appID, apiKey)
-	client.SetTimeout(1000, 10000)
 	hosts := make([]string, 3)
 	hosts[0] = appID + "-1.algolia.net"
 	hosts[1] = appID + "-2.algolia.net"
 	hosts[2] = appID + "-3.algolia.net"
-	client = NewClientWithHosts(appID, apiKey, hosts)
-	index := client.InitIndex(safeName("àlgol?à-go"))
+	c := NewClientWithHosts(appID, apiKey, hosts).(*client)
+	i := c.InitIndex(safeName("àlgol?à-go")).(*index)
 
-	return client, index
+	return c, i
 }
 
 func shouldHave(json interface{}, attr, msg string, t *testing.T) {
@@ -781,19 +779,19 @@ func TestGenerateNewSecuredApiKey(t *testing.T) {
 	}
 	key, _ = client.GenerateSecuredApiKey("182634d8894831d5dbce3b3185c50881", map[string]interface{}{"tagFilters": "(public,user1)"})
 	expected = "MDZkNWNjNDY4M2MzMDA0NmUyNmNkZjY5OTMzYjVlNmVlMTk1NTEwMGNmNTVjZmJhMmIwOTIzYjdjMTk2NTFiMnRhZ0ZpbHRlcnM9JTI4cHVibGljJTJDdXNlcjElMjk="
-    if expected != key {
-    	t.Fatalf("Invalid key: " + key + " != " + expected)
-    }
-    key, _ = client.GenerateSecuredApiKey("182634d8894831d5dbce3b3185c50881", map[string]interface{}{"tagFilters": "(public,user1)", "userToken": "42"})
-    expected = "OGYwN2NlNTdlOGM2ZmM4MjA5NGM0ZmYwNTk3MDBkNzMzZjQ0MDI3MWZjNTNjM2Y3YTAzMWM4NTBkMzRiNTM5YnRhZ0ZpbHRlcnM9JTI4cHVibGljJTJDdXNlcjElMjkmdXNlclRva2VuPTQy"
-    if expected != key {
-    	t.Fatalf("Invalid key: " + key + " != " + expected)
-    }
-    key, _ = client.GenerateSecuredApiKey("182634d8894831d5dbce3b3185c50881", map[string]interface{}{"tagFilters": "(public,user1)"}, "42")
-    expected = "OGYwN2NlNTdlOGM2ZmM4MjA5NGM0ZmYwNTk3MDBkNzMzZjQ0MDI3MWZjNTNjM2Y3YTAzMWM4NTBkMzRiNTM5YnRhZ0ZpbHRlcnM9JTI4cHVibGljJTJDdXNlcjElMjkmdXNlclRva2VuPTQy"
-    if expected != key {
-    	t.Fatalf("Invalid key: " + key + " != " + expected)
-    }
+	if expected != key {
+		t.Fatalf("Invalid key: " + key + " != " + expected)
+	}
+	key, _ = client.GenerateSecuredApiKey("182634d8894831d5dbce3b3185c50881", map[string]interface{}{"tagFilters": "(public,user1)", "userToken": "42"})
+	expected = "OGYwN2NlNTdlOGM2ZmM4MjA5NGM0ZmYwNTk3MDBkNzMzZjQ0MDI3MWZjNTNjM2Y3YTAzMWM4NTBkMzRiNTM5YnRhZ0ZpbHRlcnM9JTI4cHVibGljJTJDdXNlcjElMjkmdXNlclRva2VuPTQy"
+	if expected != key {
+		t.Fatalf("Invalid key: " + key + " != " + expected)
+	}
+	key, _ = client.GenerateSecuredApiKey("182634d8894831d5dbce3b3185c50881", map[string]interface{}{"tagFilters": "(public,user1)"}, "42")
+	expected = "OGYwN2NlNTdlOGM2ZmM4MjA5NGM0ZmYwNTk3MDBkNzMzZjQ0MDI3MWZjNTNjM2Y3YTAzMWM4NTBkMzRiNTM5YnRhZ0ZpbHRlcnM9JTI4cHVibGljJTJDdXNlcjElMjkmdXNlclRva2VuPTQy"
+	if expected != key {
+		t.Fatalf("Invalid key: " + key + " != " + expected)
+	}
 }
 
 func TestMultipleQueries(t *testing.T) {
